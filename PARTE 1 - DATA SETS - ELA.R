@@ -1,9 +1,11 @@
 
+##### PACKAGES #####
 
-## Novos PELA 
 library(haven)
 library(dplyr)
+library(sjlabelled)
 
+##### DOWNLOAD DATASETS #####
 #1.1. Lendo todos os arquivos SPSS, cada um para um banco de dados respectivo no R.
 
 setwd("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/PELA/5TH WAVE STYLE")
@@ -28,6 +30,10 @@ names(filelist) <- c(filenames)
 
 invisible(lapply(names(filelist), function(x) assign(x,filelist[[x]],envir=.GlobalEnv)))
 
+arg_87 <- read_sav ("C:/Users/livia/OneDrive - usp.br/TESE/DATASETS/PELA - NEW/BASEDATOS_ARGENTINA_87/BASEDATOS_ARGENTINA_87.sav")
+
+
+##### BRASIL #####
 #O banco referente ao Brasil teve que ser modificado antes de adicionar, porque tinha algumas VARIÁVEIS
 #discrepantes dos outros (tanto em seus nomes quanto na classe).
 
@@ -42,7 +48,7 @@ bra_sub <- bra_sub %>%
 bra_sub$id <- "12"
 
 #OUTRAS ALTERAÇÕES NOS NOMES
-####### 
+
 names (bra_sub) <- gsub("_a", "01", names(bra_sub)) 
 names (bra_sub) <- gsub("_b", "02", names(bra_sub)) 
 names (bra_sub) <- gsub("_c", "03", names(bra_sub)) 
@@ -62,15 +68,11 @@ names (bra_sub) <- gsub("_n", "14", names(bra_sub))
 
 names (bra_sub) <- gsub("_", "0", names(bra_sub)) 
 
-###############
+##### GUA - ADAPTAÇÕES #####
 
-
-### Banco da Guatemala tem uma pequena diferença- variável identificadora de partido. 
-#Vamos trabalhar isso em separado, antes de juntá-lo:
-
-#names(da85gua)[names(da85gua) == 'PP'] <- 'partido'
-
-### GANA E UNE ENTRARAM COMO COALIZÃO, então vou juntar como um sÓ partido, porque não temos resultados de votos
+#Banco da Guatemala tem o nome da variável identificadora 
+#de partido diferente do resto. 
+#Além disso partidos GANA E UNE ENTRARAM COMO COALIZÃO, então vou juntar como um só partido, porque não temos resultados de votos
 # separados entre os dois (se quiser analisar, por exemplo, a congruência agregada, por partido, sem a etapa "votos", 
 #talvez seja melhor separar de novo (só tirar essa linha de código e inserir o código acima para mudar o nome da variável):
 
@@ -78,7 +80,9 @@ da85gua$partido <- da85gua$PP
 da85gua$partido[da85gua$partido==6] <- 4
 
 
-#### CRIANDO VARIÁVEIS PARA VOTES SHARES, SEATS, Nº ENTREVISTADOS, E WEIGHTS DE VOTE SHARES E DE SEATS:
+##### VOTES & SEATS #####
+
+# CRIANDO VARIÁVEIS PARA VOTES SHARES, SEATS, Nº ENTREVISTADOS, E WEIGHTS DE VOTE SHARES E DE SEATS:
 
 ## CRIO UMA VARIÁVEL COM Nº DE ENTREVISTADOS POR PARTIDO - achar jeito melhor para isso!
 
@@ -110,11 +114,11 @@ da86nica$interview <- rep(tabulate(da86nica$partido), tabulate(da86nica$partido)
 
 
 
+
+
+
 bra_sub<- arrange(bra_sub, partido)
 bra_sub$interview <- rep(tabulate(bra_sub$partido), tabulate(bra_sub$partido))
-
-
-## Agora sim:
 
 ### TIVE QUE RETIRAR LABELS PORQUE ESTAVA DANDO ERRO NO BIND_ROWS!
 da74hon <- remove_all_labels(da74hon)
@@ -129,11 +133,19 @@ da84pe <- remove_all_labels(da84pe)
 da85gua<- remove_all_labels(da85gua)
 da86nica <- remove_all_labels(da86nica)
 
-ela_almost <- bind_rows(da74hon, da76uru, da77chi, da78cr, da80pe, da81bo, da82rdom, da83co, da84pe, da85gua, da86nica, .id = "id")
+
+# ARGENTINA - ESTUDO 87
+# - FIZ ALTERAÇÕES EM UM SCRIPT SEPARADO 
+
+##### BIND #####
+
+ela_almost <- bind_rows(da74hon, da76uru, da77chi, da78cr, da80pe, da81bo, 
+                        da82rdom, da83co, da84pe, da85gua, da86nica, arg_87, .id = "id")
+
+# Já criei uma variável "id" para poder identificar facilmente cada país, cada banco, numa sequência
+#numérica, fica mais fácil de criar "cname" assim. 
 
 
-              
-                          
 # SELECIONANDO VARIÁVEIS 
 
 ela_almost <- ela_almost %>%
@@ -143,22 +155,21 @@ ela_almost <- ela_almost %>%
 
 ela <- bind_rows(ela_almost, bra_sub)
 
-#Ainda estou mantendo uma coluna para n? Estudo, outra para id de cada banco (na ordem que foram baixados)
+#Ainda estou mantendo uma coluna para nº Estudo, outra para id de cada banco (na ordem que foram baixados)
 
 ## PODERIA TRANSFORMAR O ID NOS NOMES DAS FILENAMES, DEPOIS TIRAR O "DA", ETC. PARA FICAR PRÓXIMO DO NOME 
 #DOS PAÍSES COM 3 LETRAS. ALGUNS IA CORRESPONDER, MAS DEPOIS IA TER TODO TRABALHO DE PADRONIZAR O RESTO DOS PAÍSES
 #MAIS FÁCIL FAZER DIRETO AGORA, CRIANDO UMA LISTA CORRESPONDENTE A ID:
 
-#OBS- BRASIL FICOU L? NO FINAL, COMO 12 (PORQUE ESTAVA FORA DA LISTA INICIAL):
+#OBS- BRASIL FICOU LÁ NO FINAL, COMO 12 (PORQUE ESTAVA FORA DA LISTA INICIAL):
 
-oldvalues <- c(1:12)
-newvalues <- factor (c("HND", "URY", "CHL", "CRI", "PER", "BOL", "DOM", "COL", "PER", "GTM", "NIC", "BRA" ))  
+oldvalues <- c(1:13)
+newvalues <- factor (c("HND", "URY", "CHL", "CRI", "PER", "BOL", "DOM", "COL", "PER", "GTM", "NIC", "ARG", "BRA" ))  
 
 ela$cname <- newvalues[match(ela$id, oldvalues)]
 
-
 ### ANTES DE TERMINAR, VOU RESOLVER ALGUNS MISSINGS - PARA VAL1 E VAL2, ROES. OUTRAS VARIÁVEIS
-# QUE TALVEZ TENHAM MISSING EM 8 E 9, POR EXEMPLO, PODEM ESTAR DE FORA, A? PRECISA INCLUIR ELAS NESSE PRIMEIRO C?DIGO:
+# QUE TALVEZ TENHAM MISSING EM 8 E 9, POR EXEMPLO, PODEM ESTAR DE FORA, AÍ PRECISA INCLUIR ELAS NESSE PRIMEIRO CÓDIGO:
 
 ela <- ela %>%
   mutate_at(.vars = vars(ROES101:ROES109), 
