@@ -1,6 +1,6 @@
-rm(list=ls())
+#rm(list=ls()[!(ls() %in% c("ela"))]) INCLUIR LAPOP
 
-library(ggplot2); library(grid); library(sfsmisc); library(emdist)
+library(ggplot2); library(sfsmisc); library(emdist)
 library(foreign); library(plyr); library(sandwich) 
 library(lmtest)
 
@@ -8,114 +8,6 @@ library(tidyverse)
 
 library(haven)
 library(descr)
-
-#######LAPOP######
-
-load ("LAPOP.RData")
-
-# ÍNDICES DE CONGRUÊNCIA:
-
-### LAPOP 2010 WITH CLOSER PELA (MOSTLY 4TH WAVE)
-
-#Criando os susbsets (SEPARANDO OS ANOS ESPECÍFICOS DAS PESQUISAS)
-
-#### POR ENQUANTO, MANTENHO TODAS VARIÁVEIS DA SELEÇÃO QUE FIZ ANTES (ARQUIVO Script - LAPOP).
-#Tem variáveis socioeconômicas, teste de conhecimento e, supostamente, tudo que interesse de issues e ideologia
-
-## Filtrando 2010 e 2012, anos a serem usados no LAPOP, e tirando "ros7" que não tem em nenhum banco a ser utilizado
-#por enquanto (deve ter em 2014 ou em alguns poucos países que não estão nessa seleção, algo assim).
-## Também vou tirar algumas variáveis que eu tinha selecionado - socioeconomicas, issue_priority, teste de conhecimentos)
-## e deixar só as de congruência e outras de ideologia para usar em estatísticas descritivas e correlações com 
-## outros indicadores de ideologia. 
- 
-lapnew <- lapop %>%
-  filter (year == 2012 | year == 2010) %>%
-  select (cname, year, l1, l1b, econ2, 
-          starts_with("ros"), - dplyr::contains("ros7"), d6, starts_with("gi"), starts_with("w14"), starts_with("vb")) %>%
-  dplyr::rename (ideol_self = l1, same_sex = d6)
-
-#Agora filtrando mais, os países e anos a serem utilizados de fato em correspondência com PELA: 
-
-lapnew <- lapnew %>%
-  filter(cname =="COL"| cname == "CRI" | cname == "GTM" & year == 2012|
-         cname == "HND" & year == 2010| cname == "NIC" & year == 2012|  cname == "PER" & year == 2010| 
-         cname == "DOM"| cname == "URY")
-
-
-  
-##OBS: Fiz em duas etapas, separando antes 2010 e 2012, para facilitar o segundo código (tem vários países que vou usar os 2 bancos e ia precisar
-#escrever ambos).  
-
-
-###### PAÍSES AVULSOS ######
-### INSERIR PAÍSES QUE não TINHAM 2010 e 2012 NO LAPOP MERGED:  
-
-## 2010:
-
-# BOLIVIA
-lapbol <- read_dta ("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/LASPP/1748144313Bolivia_LAPOP_AmericasBarometer 2010.dta")
-lapbol$cname <- "BOL"
-lapbol$year <- 2010
-
-lapbol <- lapbol%>%
-  select (cname, year, l1, 
-          starts_with("ros"), - dplyr::contains("ros7"), d6, starts_with("gi"), starts_with("w14"), starts_with("vb")) %>%
-  dplyr::rename (ideol_self = l1, same_sex = d6)
-
-#CHILE:
-
-lapchl <- read_dta ("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/LASPP/1217681709Chile_LAPOP_AmericasBarometer 2010.dta")
-
-lapchl$cname <- "CHL"
-lapchl$year <- 2010
-
-lapchl <- lapchl %>% 
-  select (cname, year, l1, 
-          starts_with("ros"), - dplyr::contains("ros7"), d6, starts_with("gi"), starts_with("w14"), starts_with("vb")) %>%
-  dplyr::rename (ideol_self = l1, same_sex = d6)
-
-
-## 2012 - BOLIVIA:
-
-lapbol12 <- read_dta ("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/LASPP/Bolivia LAPOP 2012 Rev1_W.dta")
-lapbol12$cname <- "BOL"
-lapbol12$year <- 2012
-
-lapbol12 <- lapbol12 %>% 
-  select (cname, year, l1, 
-          starts_with("ros"), - dplyr::contains("ros7"), d6, starts_with("gi"), starts_with("w14"), starts_with("vb")) %>%
-  dplyr::rename (ideol_self = l1, same_sex = d6)
-
-### BRASIL 2010 - ATÉ EXISTIA NO MERGED, MAS POR ALGUM MOTIVO não TINHA DADOS PARA A VARIÁVEL D6(same_sex marriage).
-#POR ISSO PEGUEI A VERSÃO ESPECÍFICA, COMO NESSES OUTROS PAÍSES ACIMA, E AGORA FAZEMOS OS MESMOS PROCEDIMENTOS:
-
-lapbra <- read_dta ("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/LASPP/Brazil_LAPOP_AmericasBarometer 2010 data set  approved v4.dta")
-lapbra$cname <- "BRA"
-lapbra$year <- 2010
-
-lapbra <- lapbra%>%
-  select (cname, year, l1, 
-          starts_with("ros"), - dplyr::contains("ros7"), d6, starts_with("gi"), starts_with("w14"), starts_with("vb")) %>%
-  dplyr::rename (ideol_self = l1, same_sex = d6)
-
-#JUNTAR TUDO:
-
-lapnew <- remove_all_labels(lapnew)
-lapbol <- remove_all_labels(lapbol)
-lapbol12 <- remove_all_labels(lapbol12)
-lapbra <- remove_all_labels(lapbra)
-lapchl <- remove_all_labels(lapchl)
-
-lapfinal <- bind_rows(lapnew, lapbol, lapbol12,lapbra, lapchl)
-
-## dplyr::renameS E MAIS SELECT PARA DEIXAR SÓ O QUE IMPORTA DE congruência (E ALGUMAS OUTRAS DE IDEOLOGIA PARA ANÁLISES DESCRITIVAS):
-
-names (lapfinal) <- gsub("ros", "ROES", names(lapfinal)) 
-
-names (lapfinal) <- gsub("w14", "abortion", names(lapfinal)) 
-
-
-save(lapfinal, file = "lapfinal.RData")
 
 ######## PELA ########
 
@@ -127,8 +19,6 @@ load("C:/Users/livia/OneDrive - usp.br/TESE/LATAM/LASPP/elanew.RData")
 
 names (ela) <- gsub("ROES10", "ROES", names(ela)) 
 
-
-##### congruência GERAL ######
 
 ### AGORA VAMOS APRONTAR OS BANCOS PARA A FUNção DE LUPU 
 
@@ -298,7 +188,6 @@ means_ros3 <- ddply(df_ros3, .(cname), dmeans)
 
 
 ##### LEFT-RIGHT #####
-##### LEFT-RIGHT ##### 
 
 #Renomear a variável de interesse para samps:
 
